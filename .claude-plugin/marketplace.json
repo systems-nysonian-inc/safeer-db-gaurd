@@ -1,0 +1,15 @@
+{
+  "name": "nysonian",
+  "description": "Nysonian internal Claude Code plugins: guardrails that stop AI tools from writing to databases and APIs or reading secrets.",
+  "owner": {
+    "name": "Nysonian Systems"
+  },
+  "plugins": [
+    {
+      "name": "db-write-guard",
+      "source": "./plugins/db-write-guard",
+      "description": "Warns before database/API writes, blocks destructive commands (DROP, TRUNCATE) and blocks reading .env and other secret files.",
+      "category": "security"
+    }
+  ]
+}
