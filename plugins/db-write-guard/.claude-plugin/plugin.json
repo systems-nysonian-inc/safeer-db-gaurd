@@ -1,6 +1,6 @@
 {
   "name": "db-write-guard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Warns before database/API writes, blocks destructive commands (DROP, TRUNCATE) and blocks reading .env and other secret files.",
   "author": {
     "name": "Nysonian Systems"

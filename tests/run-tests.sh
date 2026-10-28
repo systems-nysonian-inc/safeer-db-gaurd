@@ -53,5 +53,36 @@ check ask '{"tool_name":"mcp__shiphero__shiphero_mutation_execute","tool_input":
 check ask '{"tool_name":"mcp__slack__slack_send_message","tool_input":{}}'
 check ask '{"tool_name":"mcp__pg__pg_query","tool_input":{"sql":"update users set role=1"}}'
 
+# Other agents: $1 = format, $2 = expected decision (as that format writes it, or none), $3 = tool call JSON
+check_fmt() {
+  out="$(printf '%s' "$3" | bash "$guard" --format "$1")"
+  got="$(printf '%s' "$out" | grep -oE '"(permissionDecision|decision)":"[a-z_]+"' | cut -d'"' -f4)"
+  got="${got:-none}"
+  if [ "$got" = "$2" ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL [$1] expected=$2 got=$got :: $3"; fi
+}
+
+# Codex: same input shape as Claude Code; cannot ask, so writes are denied
+check_fmt codex none '{"tool_name":"Bash","tool_input":{"command":"psql -c \"select 1\""}}'
+check_fmt codex deny '{"tool_name":"Bash","tool_input":{"command":"psql -c \"UPDATE orders SET a=1\""}}'
+check_fmt codex deny '{"tool_name":"Bash","tool_input":{"command":"cat .env"}}'
+check_fmt codex deny '{"tool_name":"mcp__shiphero__shiphero_mutation_execute","tool_input":{}}'
+
+# Gemini CLI: run_shell_command / read_file, MCP tools named mcp_<server>_<tool>; cannot ask
+check_fmt gemini none '{"tool_name":"run_shell_command","tool_input":{"command":"psql -c \"select * from t\""}}'
+check_fmt gemini none '{"tool_name":"read_file","tool_input":{"file_path":"/app/.env.example"}}'
+check_fmt gemini deny '{"tool_name":"read_file","tool_input":{"file_path":"/app/.env"}}'
+check_fmt gemini deny '{"tool_name": "run_shell_command", "tool_input": {"command": "psql -c \"insert into t values (1)\""}}'
+check_fmt gemini deny '{"tool_name":"run_shell_command","tool_input":{"command":"mysql -e \"DROP DATABASE prod\""}}'
+check_fmt gemini deny '{"tool_name":"mcp_slack_send_message","tool_input":{}}'
+
+# Antigravity (agy): toolCall.name / toolCall.args.CommandLine; real "ask" via force_ask
+check_fmt agy none '{"toolCall":{"name":"run_command","args":{"CommandLine":"git status"}}}'
+check_fmt agy none '{"toolCall":{"name":"view_file","args":{"AbsolutePath":"C:/app/src/main.py"}}}'
+check_fmt agy deny '{"toolCall":{"name":"view_file","args":{"AbsolutePath":"C:/app/.env"}}}'
+check_fmt agy deny '{"toolCall":{"name":"run_command","args":{"CommandLine":"psql -c \"TRUNCATE TABLE orders\""}}}'
+check_fmt agy force_ask '{"toolCall": {"name": "run_command", "args": {"CommandLine": "psql -c \"UPDATE users SET role=1\""}}}'
+check_fmt agy force_ask '{"toolCall":{"name":"run_command","args":{"CommandLine":"curl -X DELETE https://api.x.com/v1/items/3"}}}'
+check_fmt agy deny '{"toolCall":{"name":"run_command","args":{"CommandLine":"set"}}}'
+
 echo "passed=$pass failed=$fail"
 [ "$fail" -eq 0 ]
