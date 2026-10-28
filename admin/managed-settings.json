@@ -25,7 +25,6 @@
       "Read(~/.pgpass)",
       "Edit(**/.env)",
       "Edit(**/.env.*)"
-    ],
-    "disableBypassPermissionsMode": "disable"
+    ]
   }
 }

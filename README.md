@@ -22,8 +22,9 @@ What the admin settings do:
 
 - `extraKnownMarketplaces` + `enabledPlugins`: install `db-write-guard` for everyone and lock it on.
 - `strictKnownMarketplaces`: only this repo and Anthropic's official marketplace can supply plugins, so nobody can install an unvetted plugin that weakens the guard.
-- `permissions.deny`: a second, built-in layer that stops Claude reading or editing secret files.
-- `disableBypassPermissionsMode`: nobody can run Claude Code with all permission prompts switched off.
+- `permissions.deny`: a second, built-in layer that stops Claude reading or editing secret files. Deny rules apply in every permission mode, including bypass mode.
+
+Bypass mode (`--dangerously-skip-permissions`) is left available. To turn it off for everyone, add `"disableBypassPermissionsMode": "disable"` inside `permissions`.
 
 ## Check it works
 
