@@ -34,6 +34,16 @@ check deny '{"tool_name":"Bash","tool_input":{"command":"cat ./config/.env.local
 check deny '{"tool_name":"PowerShell","tool_input":{"command":"Get-Content .env"}}'
 check deny '{"tool_name":"Bash","tool_input":{"command":"printenv"}}'
 check deny '{"tool_name":"Grep","tool_input":{"pattern":"PASSWORD","path":"/app/.env"}}'
+check deny '{"tool_name":"Bash","tool_input":{"command":"grep DB_URL .env"}}'
+check deny '{"tool_name":"Bash","tool_input":{"command":"cat .env.example .env"}}'
+check deny '{"tool_name":"Bash","tool_input":{"command":"source .env && npm start"}}'
+check deny '{"tool_name":"Read","tool_input":{"file_path":"/app/.env","note":".env.example"}}'
+
+# Harmless commands that only mention a secret file: allowed
+check none '{"tool_name":"Bash","tool_input":{"command":"cp .env.example .env"}}'
+check none '{"tool_name":"Bash","tool_input":{"command":"git add .gitignore && git status | head -5","description":"Check that .env is ignored"}}'
+check none '{"tool_name":"Bash","tool_input":{"command":"echo \"remember to fill .env\" ; ls | head"}}'
+check none '{"tool_name":"Bash","tool_input":{"command":"ls -la","description":"run printenv later"}}'
 
 # Destructive: blocked
 check deny '{"tool_name":"Bash","tool_input":{"command":"psql -c \"DROP TABLE users\""}}'
@@ -65,6 +75,7 @@ check_fmt() {
 check_fmt codex none '{"tool_name":"Bash","tool_input":{"command":"psql -c \"select 1\""}}'
 check_fmt codex deny '{"tool_name":"Bash","tool_input":{"command":"psql -c \"UPDATE orders SET a=1\""}}'
 check_fmt codex deny '{"tool_name":"Bash","tool_input":{"command":"cat .env"}}'
+check_fmt codex deny '{"tool_name":"shell","tool_input":{"command":["bash","-lc","cat .env"]}}'
 check_fmt codex deny '{"tool_name":"mcp__shiphero__shiphero_mutation_execute","tool_input":{}}'
 
 # Gemini CLI: run_shell_command / read_file, MCP tools named mcp_<server>_<tool>; cannot ask

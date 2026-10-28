@@ -141,7 +141,7 @@ function Set-CodexMachine([bool]$remove) {
   $content = [regex]::Replace($content, "(?s)\r?\n?$([regex]::Escape($begin)).*?$([regex]::Escape($end))\r?\n?", "`r`n")
   if (-not $remove) {
     if ($content -match '(?m)^\s*\[(features|hooks)\]') {
-      throw "$path already has a [features] or [hooks] section. Add the block from admin\codex-requirements.toml to it by hand."
+      throw "$path already has a [features] or [hooks] section. Ask IT to merge the Nysonian hook block into it by hand."
     }
     $dir = $InstallDir
     $block = @"

@@ -49,12 +49,29 @@ read_tools='Read|Grep|read_file|read_many_files|search_file_content|grep_search|
 # Secret files: .env, .env.production, *.pem, *.key, credentials, ~/.aws, ~/.ssh, .pgpass.
 # Templates such as .env.example / .env.sample / .env.template stay readable.
 secret_path='(^|[\\/" =])\.env(\.[a-z0-9_-]+)?([^a-z0-9_.-]|$)|\.(pem|key|pfx|p12)\b|credentials(\.json)?\b|[\\/]\.aws[\\/]|[\\/]\.ssh[\\/]|\.pgpass|\.my\.cnf'
-secret_template='\.env\.(example|sample|template|dist)'
 secret_reader='\b(cat|type|less|more|head|tail|gc|get-content|source|grep|findstr|sed|awk|strings)\b'
-if has "$secret_path" && ! has "$secret_template" && { tool_is "$read_tools" || has "$secret_reader"; }; then
+deny_secret() {
   decide deny "COMPANY POLICY: AI tools must not read secret files (.env, keys, credentials). Use .env.example for structure, or ask a teammate for the value you need."
+}
+# Drops template names so ".env.example" never counts as a secret, without excusing other paths next to it.
+no_templates() { sed -E 's/\.env\.(example|sample|template|dist)//gI'; }
+
+# Shell command text only (not the tool's description): "command" or agy's "CommandLine".
+# Codex may send the command as an array; then the whole array is used.
+cmd="$(printf '%s' "$input" | grep -oE '"(command|CommandLine)"[[:space:]]*:[[:space:]]*("([^"\\]|\\.)*"|\[[^]]*\])' | head -1 | sed -E 's/^"[A-Za-z]+"[[:space:]]*:[[:space:]]*//')"
+
+if tool_is "$read_tools"; then
+  printf '%s' "$input" | no_templates | grep -qiE "$secret_path" && deny_secret
+elif [ -n "$cmd" ]; then
+  # A secret is read only when a reader and a secret path sit in the same piece of the command,
+  # so "claude plugin list | head" or "cp .env.example .env" are not blocked.
+  while IFS= read -r part; do
+    printf '%s' "$part" | grep -qiE "$secret_reader" && printf '%s' "$part" | no_templates | grep -qiE "$secret_path" && deny_secret
+  done <<EOF
+$(printf '%s' "$cmd" | sed -E 's/\\n/\n/g; s/(\|\||&&|[|;&])/\n/g')
+EOF
 fi
-if has '\b(printenv|get-childitem[[:space:]]+env:|gci[[:space:]]+env:)\b|"(command|CommandLine)"[[:space:]]*:[[:space:]]*"(env|set)"'; then
+if printf '%s' "$cmd" | grep -qiE '\b(printenv|get-childitem[[:space:]]+env:|gci[[:space:]]+env:)\b' || has '"(command|CommandLine)"[[:space:]]*:[[:space:]]*"(env|set)"'; then
   decide deny "COMPANY POLICY: AI tools must not dump environment variables; they often hold secrets."
 fi
 
